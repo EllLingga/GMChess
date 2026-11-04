@@ -1,0 +1,33 @@
+name: Extract zip
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract zip files
+        run: |
+          shopt -s nullglob
+          zips=(*.zip)
+          if [ ${#zips[@]} -eq 0 ]; then echo "Tidak ada zip"; exit 0; fi
+          for z in "${zips[@]}"; do
+            rm -rf /tmp/x && mkdir /tmp/x
+            unzip -q -o "$z" -d /tmp/x
+            entries=(/tmp/x/*)
+            if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
+              src="${entries[0]}"
+            else
+              src=/tmp/x
+            fi
+            cp -a "$src"/. .
+            git rm -q -f "$z"
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Extract zip" || true
+          git push
